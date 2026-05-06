@@ -1,7 +1,7 @@
 from pydantic_ai import Agent
 from rag.backend.constants import VECTOR_DB_PATH, MODEL
 import lancedb
-from rag.backend.data_models import RagResponse
+from rag.backend.data_model import RagResponse
 
 from dotenv import load_dotenv 
 
