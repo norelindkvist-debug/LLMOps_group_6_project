@@ -4,14 +4,15 @@ from bs4 import BeautifulSoup
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_chroma import Chroma
+from rag.backend.constants import DATA_PATH, 
 
 # Path to the data folder
-DATA_DIR = Path(__file__).parent.parent / "data"
+
 CHROMA_DIR = Path(__file__).parent.parent / "chroma_db"
 
 def load_and_parse_files():
     documents = []
-    for file in DATA_DIR.glob("*"):
+    for file in DATA_PATH.glob("*"):
         with open(file, "r", encoding="utf-8") as f:
             content = f.read()
         
