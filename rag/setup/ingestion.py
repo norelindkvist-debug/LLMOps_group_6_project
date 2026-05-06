@@ -66,4 +66,4 @@ if __name__ == "__main__":
     documents = load_and_parse_files()
     chunks = chunk_documents(documents)
     store_in_chroma(chunks)
-    print("Ingestion complete!")
+    print("Ingestion complete!")++
