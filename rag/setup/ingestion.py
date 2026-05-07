@@ -1,69 +1,29 @@
-import os
-from pathlib import Path
-from bs4 import BeautifulSoup
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings
-from langchain_chroma import Chroma
-from rag.backend.constants import DATA_PATH, 
+import lancedb
+from rag.backend.data_model import Article
+from rag.backend.constants import DATA_PATH, VECTOR_DB_PATH
 
-# Path to the data folder
+def setup_vector_db(path):
+    vector_db = lancedb.connect(uri=path)
+    vector_db.create_table("articles", schema=Article, exist_ok=True)
 
-CHROMA_DIR = Path(__file__).parent.parent / "chroma_db"
+    return vector_db
 
-def load_and_parse_files():
-    documents = []
-    for file in DATA_PATH.glob("*"):
-        with open(file, "r", encoding="utf-8") as f:
+def ingest_docs_to_vector_db(table):
+    for file in DATA_PATH.glob("*.md"):
+        with open(file) as f:
             content = f.read()
-        
-        # Parse HTML with BeautifulSoup
-        soup = BeautifulSoup(content, "html.parser")
-        
-        # Remove scripts and navigation
-        for tag in soup(["script", "style", "nav", "footer"]):
-            tag.decompose()
-        
-        text = soup.get_text(separator=" ", strip=True)
-        
-        if text:
-            documents.append({"text": text, "source": file.name})
-    
-    print(f"Loaded {len(documents)} files")
-    return documents
 
-def chunk_documents(documents):
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=50
-    )
-    
-    chunks = []
-    for doc in documents:
-        splits = splitter.split_text(doc["text"])
-        for split in splits:
-            chunks.append({"text": split, "source": doc["source"]})
-    
-    print(f"Created {len(chunks)} chunks")
-    return chunks
+        document_name = file.name
+        table.delete(f"document_name = '{document_name}'")
 
-def store_in_chroma(chunks):
-    embeddings = OpenAIEmbeddings(api_key=os.getenv("OPENAI_API_KEY"))
-    
-    texts = [c["text"] for c in chunks]
-    metadatas = [{"source": c["source"]} for c in chunks]
-    
-    vectorstore = Chroma.from_texts(
-        texts=texts,
-        embedding=embeddings,
-        metadatas=metadatas,
-        persist_directory=str(CHROMA_DIR)
-    )
-    
-    print(f"Stored {len(texts)} chunks in ChromaDB")
-    return vectorstore
+        table.add([{
+            "document_name": document_name,
+            "filepath": str(file),
+            "content": content
+        }])
+
+        print(table.to_pandas()["document_name"])
 
 if __name__ == "__main__":
-    documents = load_and_parse_files()
-    chunks = chunk_documents(documents)
-    store_in_chroma(chunks)
-    print("Ingestion complete!")++
+    vector_db = setup_vector_db(VECTOR_DB_PATH)
+    ingest_docs_to_vector_db(vector_db["articles"])

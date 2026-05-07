@@ -1,0 +1,1 @@
+# Fix the structure for the docker frontend server
