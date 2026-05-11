@@ -23,8 +23,10 @@ class Prompt(BaseModel):
 
 
 class RagResponse(BaseModel):
-    filename: str | None = Field(default=None, description="filename of retrieved file")
-    answer: str | None = Field(
+    filename: str | None = Field(
         default=None,
-        description="answer based on retrieved file, concise but capture essential meaning",
+        description="filename of retrieved file"
+    )
+    answer: str = Field(
+        description="answer based on retrieved file, concise but capture essential meaning"
     )

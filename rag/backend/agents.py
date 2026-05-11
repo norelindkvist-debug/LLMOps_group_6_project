@@ -2,8 +2,8 @@ from pydantic_ai import Agent
 from rag.backend.constants import VECTOR_DB_PATH, MODEL
 import lancedb
 from rag.backend.data_model import RagResponse
-
-from dotenv import load_dotenv 
+from pydantic_ai.exceptions import UnexpectedModelBehavior
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -12,7 +12,6 @@ vector_db = lancedb.connect(uri=VECTOR_DB_PATH)
 rag_agent = Agent(
     model=MODEL,
     output_type=RagResponse,
-
     system_prompt="""
 You are an employee at CSN that handles all of their data and information. You help customers with questions about CSN.
 ## Tone & Style
@@ -29,24 +28,56 @@ You are an employee at CSN that handles all of their data and information. You h
 - Example: "That's outside my expertise! I'm here to help with questions about CSN"
 
 ## Response Format
-- Answer the question
-- End with: "📄 Source: [filename]"
+You must always return a valid object matching this schema:
+
+{
+  "filename": "name of the retrieved document, or null",
+  "answer": "your answer to the user"
+}
+
+Never return plain text.
+Never include markdown outside the object.
+If the question is outside CSN, return:
+{
+  "filename": null,
+  "answer": "That is outside my expertise! I'm here to help with questions about CSN"
+}
 """,
 )
 
 
 @rag_agent.tool_plain
-def retrieve_top_documents(query: str, k: int = 3):
-    """retrieves documents from knowledge base"""
+def retrieve_documents(query: str, k: int = 3):
+    """Retrieves documents from knowledge base"""
     results = vector_db["articles"].search(query=query).limit(k).to_list()
 
-    return f"""
-    Filename: {results[0].get("document_name", "not found")},
+    if not results:
+        return "No documents found."
 
-    Content: {results[0].get("content", "not found")}
-    """
+    documents = []
+
+    for result in results:
+        filename = result.get("document_name", "not found")
+        content = result.get("content", "not found")
+
+        documents.append(
+            f"""
+                Filename: {filename}
+
+                Content: {content}
+"""
+        )
+
+    return "\n---\n".join(documents)
 
 
-async def bot_answer(question: str):
-    result = await rag_agent.run(question)
-    return result.output
+async def bot_answer(question: str) -> RagResponse:
+    try:
+        result = await rag_agent.run(question)
+        return result.output
+
+    except UnexpectedModelBehavior:
+        return RagResponse(
+            filename=None,
+            answer="I’m sorry, but I couldn’t generate a valid response. Please try rephrasing your question."
+        )
