@@ -45,6 +45,20 @@ If the question is outside CSN, return:
 """,
 )
 
+def clean_filename(filename: str | None) -> str | None:
+    if not filename:
+        return None
+
+    # Exempel:
+    # www.csn.se_bidrag-och-lan.html.2026-04-28T12_44_30.895Z.md
+    # -> www.csn.se_bidrag-och-lan.html
+    if ".html" in filename:
+        filename = filename.split(".html")[0] + ".html"
+
+    # Byt ut understreck mot slash
+    filename = filename.replace("_", "/")
+
+    return filename
 
 @rag_agent.tool_plain
 def retrieve_documents(query: str, k: int = 3):
@@ -57,7 +71,7 @@ def retrieve_documents(query: str, k: int = 3):
     documents = []
 
     for result in results:
-        filename = result.get("document_name", "not found")
+        filename = clean_filename(result.get("document_name", "not found"))
         content = result.get("content", "not found")
 
         documents.append(
@@ -74,7 +88,11 @@ def retrieve_documents(query: str, k: int = 3):
 async def bot_answer(question: str) -> RagResponse:
     try:
         result = await rag_agent.run(question)
-        return result.output
+
+        output = result.output
+        output.filename = clean_filename(output.filename)
+
+        return output
 
     except UnexpectedModelBehavior:
         return RagResponse(
