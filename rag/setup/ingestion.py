@@ -18,7 +18,7 @@ def ingest_docs_to_vector_db(table):
 
         table.add([{
             "document_name": document_name,
-            "filepath": str(file),
+            "filename": str(file),
             "content": content
         }])
 

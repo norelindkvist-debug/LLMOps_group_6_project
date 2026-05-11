@@ -22,7 +22,7 @@ def layout():
         st.markdown(data["answer"])
 
         st.markdown("## Source:")
-        st.markdown(data["filepath"])
+        st.markdown(data.get("filename", "No source found"))
 
 
 if __name__ == "__main__":
