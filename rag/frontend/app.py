@@ -244,7 +244,7 @@ def layout():
             </div>
             """, unsafe_allow_html=True)
 
-    # === HANTERA SKICKAD FRÅGA (från knapp eller textfält) ===
+    # === HANTERA SKICKAD FRÅGA ===
     if (send_clicked and text_input.strip()) or st.session_state.get("pending_question"):
         user_question = st.session_state.get("pending_question") or text_input.strip()
         
